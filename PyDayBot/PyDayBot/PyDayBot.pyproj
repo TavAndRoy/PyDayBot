@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>bf334f72-3272-4065-8481-ca68ec5da784</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>PyDayBot.py</StartupFile>
+    <StartupFile>SmallBoard.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
