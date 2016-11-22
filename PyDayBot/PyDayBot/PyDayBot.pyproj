@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>bf334f72-3272-4065-8481-ca68ec5da784</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>SmallBoard.py</StartupFile>
+    <StartupFile>TestRun.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -28,6 +28,9 @@
     </Compile>
     <Compile Include="PyDayBot.py" />
     <Compile Include="SmallBoard.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="TestRun.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
