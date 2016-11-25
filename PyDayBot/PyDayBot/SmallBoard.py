@@ -8,8 +8,11 @@ class SmallBoard(object):
         
         return super().__init__(**kwargs)
 
-    def GetLegalMoves(self):
+    def GetLegalMovesByIndex(self):
         return [ (x,y) for x in range(3) for y in range(3) if self.table[x][y] == 0]
+
+    def GetLegalMovesByLetter(self):
+        return [ chr((3 * x + y) + ord("A")) for x in range(3) for y in range(3) if self.table[x][y] == 0]
 
     def MakeMoveByLetter(self, owner, move):
         value = ord(move) - ord("A")
@@ -18,7 +21,7 @@ class SmallBoard(object):
         self.table[x][y] = owner
 
     def MakeMoveByNumber(self, owner, move):
-        x = int(move / 3.0)
+        x = int(move / 3)
         y = move % 3
         self.table[x][y] = owner
 
@@ -43,6 +46,41 @@ class SmallBoard(object):
             links[7][i] = self.table[i][2 - i]
 
         return links
+
+    def IsCaptured(self):
+        data = self.Split()
+        
+        for item in data:
+            flag = True
+            
+            for index in range(2):
+                if (item[index] != item[index + 1] or item[index] == 0):
+                    flag = False
+                    break
+
+            if (flag):
+                return item[0]
+
+        return 0
+
+    def IsFull(self):
+        for i in range(3):
+            for j in range(3):
+                if self.table[i][j] == 0:
+                    return False
+        return True
+
+    @staticmethod
+    def FromList(data):
+        board = SmallBoard()
+        
+        list = [[y for y in range(3)] for x in range(3)]
+        for i in range(3):
+            for j in range(3):
+                list[i][j] = data[3 * i + j]
+
+        board.table = list
+        return board
     
         
     

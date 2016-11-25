@@ -1,9 +1,7 @@
 from http.server import BaseHTTPRequestHandler,HTTPServer
-import PyDayBot
 
 #DEFINE PORT NUMBER HERE:
 PORT_NUMBER = 6969
-BOT_NAME = "UTTTL"
 HANDLER_FUNC = None
 INFO_FUNC = None
 
@@ -34,17 +32,3 @@ def start_bot(f, e, pn):
         server.serve_forever()
     except KeyboardInterrupt:
         server.socket.close()
-
-def main():
-    start_bot(BoardHandler, InfoHandler, PORT_NUMBER);
-
-def InfoHandler(data):
-    print("Info: " + data)
-    return BOT_NAME.encode()
-
-def BoardHandler(move):
-    print("OP move: " + move)
-    return "EE".encode() if move == "NN" else move.encode()
-
-if __name__ == "__main__":
-    main()
