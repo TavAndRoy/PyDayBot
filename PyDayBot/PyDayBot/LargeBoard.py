@@ -23,15 +23,32 @@ class LargeBoard(object):
         self.lastTable = (boardIndexX, boardIndexY)
         self.currentTableIndex = (int(moveNumber / 3), moveNumber % 3)
         self.currentTableLetter = move[1]
+    
+    def MakeMoveByIndex(self, owner, indexMove):
+        move = chr(3 * indexMove[0][1] + indexMove[0][0] + ord("A"))
+        move = move + chr(3 * indexMove[1][1] + indexMove[1][0] + ord("A"))
+
+        boardNumber = ord(move[0]) - ord("A")
+        moveNumber = ord(move[1]) - ord("A")
+
+        boardIndexX = int(boardNumber / 3)
+        boardIndexY = boardNumber % 3
+
+        self.tables[boardIndexX][boardIndexY].MakeMoveByNumber(owner, moveNumber)
+        self.LastMove = move
+        self.lastTable = (boardIndexX, boardIndexY)
+        self.currentTableIndex = (int(moveNumber / 3), moveNumber % 3)
+        self.currentTableLetter = move[1]
 
     def GetCurrentBoard(self):
         return self.tables[self.currentTableIndex[0]][self.currentTableIndex[1]]
 
     def GetCapturedBoards(self):
-        caped = []
-        for x in self.tables:
-            for y in x:
-                caped.append(y.IsCaptured())
+        caped = [[0 for x in range(3)] for x in range(3)]
+        for x in range(3):
+            for y in range(3):
+                caped[x][y] = self.tables[x][y].IsCaptured()
+
         return caped
 
     def GetLegalMovesByLetter(self):
@@ -52,4 +69,3 @@ class LargeBoard(object):
             list += temp
 
         return list
-

@@ -1,8 +1,9 @@
 from SmallBoard import *
 from copy import deepcopy
 from math import *
+import multiprocessing as mp
 
-def DamageControlSmall(board, SINGLETONE = 1, DOUBLETONE = 10):
+def DamageControlSmall(board, SINGLETONE=1, DOUBLETONE=10):
     damageTable = [[0 for x in range(3)] for x in range(3)]
     
     data = board.Split()
@@ -110,7 +111,7 @@ def DamageControlSmall(board, SINGLETONE = 1, DOUBLETONE = 10):
 
     return damageTable
 
-def OffenseControlSmall(board, SINGLETONE = 2, DOUBLETONE = 13):
+def OffenseControlSmall(board, SINGLETONE=2, DOUBLETONE=13):
     offenseTable = [[0 for x in range(3)] for x in range(3)]
     
     data = board.Split()
@@ -143,8 +144,6 @@ def OffenseControlSmall(board, SINGLETONE = 2, DOUBLETONE = 13):
             
             if allyTilesCount == 2:
                 offenseTable[i][emptyTiles[0]] += DOUBLETONE
-
-            
 
         elif i < 6:
             for j in range(len(data[i])):
@@ -206,8 +205,7 @@ def OffenseControlSmall(board, SINGLETONE = 2, DOUBLETONE = 13):
                 continue
 
             if allyTilesCount == 1:
-                for j in range(3):
-                    if j in emptyTiles:
+                for j in emptyTiles:
                         offenseTable[j][2 - j] += SINGLETONE
             
             if allyTilesCount == 2:
@@ -215,52 +213,143 @@ def OffenseControlSmall(board, SINGLETONE = 2, DOUBLETONE = 13):
 
     return offenseTable
 
-def DamageControlLarge(board):
+def DamageControlLarge(board, SINGLETONE=100, DOUBLETONE=1000):
     tempBoard = SmallBoard.FromList(board.GetCapturedBoards())
-    return DamageControlSmall(tempBoard, 100, 1000)
+    return DamageControlSmall(tempBoard, SINGLETONE, DOUBLETONE)
 
-def OffenseControlLarge(board):
+def OffenseControlLarge(board, SINGLETONE=130, DOUBLETONE=9000):
     tempBoard = SmallBoard.FromList(board.GetCapturedBoards())
-    return OffenseControlSmall(tempBoard, 130, 9999999)
+    return OffenseControlSmall(tempBoard, SINGLETONE, DOUBLETONE)
 
-def SelectMove(board):
-    print("Current Table:" + board.currentTableLetter)
-    print("Current Table Values:" + str(board.GetCurrentBoard().table))
+def SVMeasureMove(data):
+    return MeasureMove(data[0], data[1])
+
+def MeasureMove(board, move):
+    coordinates = parseMove(move)
+    largeWorkBoard = deepcopy(board)
+    currSmallWorkBoard = deepcopy(largeWorkBoard.tables[coordinates[0][0]][coordinates[0][1]])
+
+    targetBoardDamage = DamageControlSmall(currSmallWorkBoard)
+    moveDamageValue = targetBoardDamage[coordinates[1][0]][coordinates[1][1]]
+
+    targetBoardOffense = OffenseControlSmall(currSmallWorkBoard)
+    moveOffenseValue = targetBoardOffense[coordinates[1][0]][coordinates[1][1]]
+
+    largeBoardDamage = DamageControlLarge(largeWorkBoard)
+    largeBoardOffense = OffenseControlLarge(largeWorkBoard)
+
+    largeWorkBoard.MakeMoveByLetters(1, move)
+
+    largeBoardDamageValue = 0
+    largeBoardOffenseValue = 0
+
+    moveCaptureBoard = False
+    if largeWorkBoard.tables[coordinates[0][0]][coordinates[0][1]].IsCaptured() == 1:
+        moveCaptureBoard = True
+
+    if moveCaptureBoard:
+        largeBoardDamageValue = largeBoardDamage[coordinates[0][0]][coordinates[0][1]]
+        largeBoardOffenseValue = largeBoardOffense[coordinates[0][0]][coordinates[0][1]]
+
+    enemyMoveOffenseValue = 0
+    enemyMoveDamageValue = 0
+    enemyLargeBoardDamageValue = 0
+    enemyLargeBoardOffenseValue = 0
+
+    maxSum = 0
+
+    if largeWorkBoard.tables[coordinates[1][0]][coordinates[1][1]].IsCaptured() == 0:
+        enemyTargetBoardOffense = DamageControlSmall(largeWorkBoard.tables[coordinates[1][0]][coordinates[1][1]], 2, 13)
+        enemyMoveOffenseValue = max(max(enemyTargetBoardOffense))
+
+        enemyTargetBoardDamage = OffenseControlSmall(largeWorkBoard.tables[coordinates[1][0]][coordinates[1][1]], 1, 10)
+        enemyMoveDamageValue = max(max(enemyTargetBoardDamage))
+
+        enemyMaxValue = -1
+        enemyMoveCoords = (0,0)
+
+        for i in range(3):
+            for j in range(3):
+                if enemyMaxValue < enemyTargetBoardDamage[i][j] + enemyTargetBoardOffense[i][j]:
+                    enemyMaxValue = enemyTargetBoardDamage[i][j] + enemyTargetBoardOffense[i][j]
+                    enemyMoveCoords = (i,j)
+
+        enemyLargeBoardDamage = OffenseControlLarge(largeWorkBoard, 90, 900)
+        enemyLargeBoardOffense = DamageControlLarge(largeWorkBoard, 100, 7500)
+    
+        largeWorkBoard.MakeMoveByIndex(-1, (coordinates[1],enemyMoveCoords))
+
+        if largeWorkBoard.tables[coordinates[1][0]][coordinates[1][1]].IsCaptured() == -1:
+            enemyLargeBoardDamageValue = enemyLargeBoardDamage[coordinates[1][0]][coordinates[1][1]]
+            enemyLargeBoardOffenseValue = enemyLargeBoardOffense[coordinates[1][0]][coordinates[1][1]]
+
+        maxSum = enemyMoveDamageValue + enemyMoveOffenseValue + enemyLargeBoardDamageValue + enemyLargeBoardOffenseValue
+    else:
+        availableMoves = largeWorkBoard.GetLegalMovesByLetter()
+        for possibleMove in availableMoves:
+            secondLargeWorkBoard = deepcopy(largeWorkBoard)
+            tempCoords = parseMove(possibleMove)
+            
+            enemyTargetBoardOffense = DamageControlSmall(secondLargeWorkBoard.tables[tempCoords[0][0]][tempCoords[0][1]], 2, 8)
+            enemyMoveOffenseValuePrivate = max(max(enemyTargetBoardOffense))
+
+            enemyTargetBoardDamage = OffenseControlSmall(secondLargeWorkBoard.tables[tempCoords[0][0]][tempCoords[0][1]], 1, 6)
+            enemyMoveDamageValuePrivate = max(max(enemyTargetBoardDamage))
+
+            enemyMaxValue = -1
+            enemyMoveCoords = (0,0)
+
+            for i in range(3):
+                for j in range(3):
+                    if enemyMaxValue < enemyTargetBoardDamage[i][j] + enemyTargetBoardOffense[i][j]:
+                        enemyMaxValue = enemyTargetBoardDamage[i][j] + enemyTargetBoardOffense[i][j]
+                        enemyMoveCoords = (i,j)
+
+            enemyLargeBoardDamage = OffenseControlLarge(secondLargeWorkBoard, 90, 900)
+            enemyLargeBoardOffense = DamageControlLarge(secondLargeWorkBoard, 100, 7500)
+    
+            secondLargeWorkBoard.MakeMoveByIndex(-1, (tempCoords[0],enemyMoveCoords))
+
+            enemyLargeBoardDamageValuePrivate = 0
+            enemyLargeBoardOffenseValuePrivate = 0
+
+            if secondLargeWorkBoard.tables[tempCoords[0][0]][tempCoords[0][1]].IsCaptured() == -1:
+                enemyLargeBoardDamageValuePrivate = enemyLargeBoardDamage[tempCoords[0][0]][tempCoords[0][1]]
+                enemyLargeBoardOffenseValuePrivate = enemyLargeBoardOffense[tempCoords[0][0]][tempCoords[0][1]]
+
+            maxSum = max(enemyLargeBoardDamageValuePrivate + enemyLargeBoardOffenseValuePrivate + enemyMoveDamageValuePrivate + enemyMoveOffenseValuePrivate, maxSum)
+            del secondLargeWorkBoard
+
+    mix = (moveDamageValue + moveOffenseValue + largeBoardDamageValue + largeBoardOffenseValue) - (maxSum)
+    print("[Move: " + move + "] [Mix: " + str(mix) + "] [MaxSum: " + str(maxSum) + "]")
+
+    return mix
+
+def parseMove(move):
+    boardNumber = ord(move[0]) - ord("A")
+    moveNumber = ord(move[1]) - ord("A")
+
+    boardIndexX = int(boardNumber / 3)
+    boardIndexY = boardNumber % 3
+
+    smallBoardX = int(moveNumber / 3)
+    smallBoardY = moveNumber % 3
+
+    return [(boardIndexX, boardIndexY),(smallBoardX, smallBoardY)]
+
+def SelectMove(board, threadPool):
     moves = board.GetLegalMovesByLetter()
 
-    print("Tested Moves: " + str(moves))
-
-    maxDamage = MeasureMove(board, moves[0])
-    bestMove = moves[0]
+    '''maxDamage = -65535
+    bestMove = ""
     for move in moves:
         damage = MeasureMove(board, move)
-        print("Move: " + str(move) + " Damage: " + str(damage))
         if (maxDamage < damage):
             maxDamage = damage
             bestMove = move
 
-    return bestMove
+    return bestMove'''
 
-def MeasureMove(board, move):
-    largeWorkBoard = deepcopy(board)
-    mySmallWorkBoard = largeWorkBoard.GetCurrentBoard()
-    
-    largeBaseDamage = DamageControlLarge(largeWorkBoard)
-    mySmallBaseDamage = DamageControlSmall(mySmallWorkBoard)
-    largeBaseOffense = OffenseControlLarge(largeWorkBoard)
-    mySmallBaseOffense = OffenseControlSmall(mySmallWorkBoard)
-    
-    largeWorkBoard.MakeMoveByLetters(1, move)
-
-    largePostDamage = DamageControlLarge(largeWorkBoard)
-    largePostOffense = OffenseControlLarge(largeWorkBoard)
-    mySmallPostDamage = DamageControlSmall(mySmallWorkBoard)
-    nextSmallPostDamage = DamageControlSmall(largeWorkBoard.GetCurrentBoard())
-
-    sum = 0
-    for i in range(3):
-        for j in range(3):
-            sum += sqrt((mySmallBaseOffense[i][j] + largePostOffense[i][j]) * (largePostDamage[i][j] + mySmallPostDamage[i][j] + nextSmallPostDamage[i][j]))
-            
-
-    return sum
+    inputs = [(board, move) for move in moves]
+    results = threadPool.map(SVMeasureMove, inputs)
+    return moves[results.index(max(results))]

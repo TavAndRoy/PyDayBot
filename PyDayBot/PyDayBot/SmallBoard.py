@@ -1,4 +1,5 @@
 from math import *
+from copy import deepcopy
 
 class SmallBoard(object):
     """Helps calculating the samll boards"""
@@ -73,14 +74,6 @@ class SmallBoard(object):
     @staticmethod
     def FromList(data):
         board = SmallBoard()
-        
-        list = [[y for y in range(3)] for x in range(3)]
-        for i in range(3):
-            for j in range(3):
-                list[i][j] = data[3 * i + j]
+        board.table = deepcopy(data)
 
-        board.table = list
         return board
-    
-        
-    
