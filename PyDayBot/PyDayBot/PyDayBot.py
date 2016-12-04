@@ -321,7 +321,7 @@ def MeasureMove(board, move):
             del secondLargeWorkBoard
 
     mix = (moveDamageValue + moveOffenseValue + largeBoardDamageValue + largeBoardOffenseValue) - (maxSum)
-    print("[Move: " + move + "] [Mix: " + str(mix) + "] [MaxSum: " + str(maxSum) + "]")
+    #print("[Move: " + move + "] [Mix: " + str(mix) + "] [MaxSum: " + str(maxSum) + "]")
 
     return mix
 
